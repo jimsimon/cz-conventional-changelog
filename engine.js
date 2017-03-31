@@ -39,7 +39,7 @@ module.exports = function (options) {
     // By default, we'll de-indent your commit
     // template and will keep empty lines.
     prompter: function(cz, commit) {
-      console.log('\nLine 1 will be cropped at 100 characters. All other lines will be wrapped after 100 characters.\n');
+      console.log('\nLine 1 will be cropped at 72 characters. All other lines will be wrapped after 100 characters.\n');
 
       // Let's ask some questions of the user
       // so that we can populate our commit
@@ -74,10 +74,15 @@ module.exports = function (options) {
           type: 'input',
           name: 'issues',
           message: 'List any issues closed by this change:\n'
+        },
+        {
+          type: 'input',
+          name: 'testplan',
+          message: 'Provide a test plan:\n'
         }
       ]).then(function(answers) {
 
-        var maxLineWidth = 100;
+        var maxLineWidth = 72;
 
         var wrapOptions = {
           trim: true,
@@ -93,7 +98,7 @@ module.exports = function (options) {
         // Hard limit this line
         var head = (answers.type + scope + ': ' + answers.subject.trim()).slice(0, maxLineWidth);
 
-        // Wrap these lines at 100 characters
+        // Wrap these lines at 72 characters
         var body = wrap(answers.body, wrapOptions);
 
         // Apply breaking change prefix, removing it if already present
@@ -101,11 +106,19 @@ module.exports = function (options) {
         breaking = breaking ? 'BREAKING CHANGE: ' + breaking.replace(/^BREAKING CHANGE: /, '') : '';
         breaking = wrap(breaking, wrapOptions);
 
-        var issues = wrap(answers.issues, wrapOptions);
+        // Apply issues prefix
+        var issues = answers.issues.trim();
+        issues = issues ? 'fixes ' + issues : '';
+        issues = wrap(issues, wrapOptions);
 
-        var footer = filter([ breaking, issues ]).join('\n\n');
+        // Wrap these lines at 72 characters
+        var testplan = answers.testplan.trim();
+        testplan = testplan ? 'Test plan:\n' + testplan : '';
+        testplan = wrap(testplan, wrapOptions);
 
-        commit(head + '\n\n' + body + '\n\n' + footer);
+        var footer = filter([ breaking, issues, testplan ]).join('\n\n');
+
+        commit([head, body, footer].join('\n\n'));
       });
     }
   };
