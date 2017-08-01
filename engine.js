@@ -54,23 +54,18 @@ module.exports = function (options) {
           name: 'type',
           message: 'Select the type of change that you\'re committing:',
           choices: choices
-        }, {
+        },
+        {
           type: 'input',
           name: 'scope',
-          message: 'Denote the scope of this change ($location, $browser, $compile, etc.):\n'
-        }, {
+          message: 'Denote the scope of this change (location, browser, compile, etc.):\n'
+        },
+        {
           type: 'input',
           name: 'subject',
           message: 'Write a short, imperative tense description of the change:\n'
-        }, {
-          type: 'input',
-          name: 'body',
-          message: 'Provide a longer description of the change:\n'
-        }, {
-          type: 'input',
-          name: 'breaking',
-          message: 'List any breaking changes:\n'
-        }, {
+        },
+        {
           type: 'input',
           name: 'issues',
           message: 'List any issues closed by this change:\n'
@@ -79,6 +74,27 @@ module.exports = function (options) {
           type: 'input',
           name: 'testplan',
           message: 'Provide a test plan:\n'
+        },
+        {
+          type: 'confirm',
+          name: 'breaking',
+          message: 'Is this a breaking change?\n'
+        },
+        {
+          type: 'input',
+          name: 'notes',
+          message: 'Provide any important details about the breaking change:\n',
+          when: function (answers) {
+            return answers.breaking
+          }
+        },
+        {
+          type: 'input',
+          name: 'notes',
+          message: '(Optional) Provide any additional information you think might be useful:\n',
+          when: function (answers) {
+            return !answers.breaking
+          }
         }
       ]).then(function(answers) {
 
@@ -95,20 +111,9 @@ module.exports = function (options) {
         var scope = answers.scope.trim();
         scope = scope ? '(' + answers.scope.trim() + ')' : '';
 
-        // Hard limit this line
-        var head = (answers.type + scope + ': ' + answers.subject.trim()).slice(0, maxLineWidth);
-
-        // Wrap these lines at 72 characters
-        var body = wrap(answers.body, wrapOptions);
-
-        // Apply breaking change prefix, removing it if already present
-        var breaking = answers.breaking.trim();
-        breaking = breaking ? 'BREAKING CHANGE: ' + breaking.replace(/^BREAKING CHANGE: /, '') : '';
-        breaking = wrap(breaking, wrapOptions);
-
         // Apply issues prefix
         var issues = answers.issues.trim();
-        issues = issues ? 'fixes ' + issues : '';
+        issues = issues ? 'Fixes ' + issues : '';
         issues = wrap(issues, wrapOptions);
 
         // Wrap these lines at 72 characters
@@ -116,7 +121,18 @@ module.exports = function (options) {
         testplan = testplan ? 'Test plan:\n' + testplan : '';
         testplan = wrap(testplan, wrapOptions);
 
-        var footer = filter([ breaking, issues, testplan ]).join('\n\n');
+        // Apply breaking change prefix
+        var footerMsg = '';
+        if (answers.breaking) {
+          footerMsg = 'BREAKING CHANGE: ';
+        }
+        footerMsg += answers.notes;
+        footerMsg = wrap(footerMsg, wrapOptions);
+
+        // Hard limit this line
+        var head = (answers.type + scope + ': ' + answers.subject.trim()).slice(0, maxLineWidth);
+        var body = filter([ issues, testplan ]).join('\n\n');
+        var footer = filter([ footerMsg ]).join('\n\n');
 
         commit([head, body, footer].join('\n\n'));
       });
